@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SurgAgent-Bench — Interactive Demo</title>
+<style>
+  :root {
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #1a202c;
+    --muted: #718096;
+    --primary: #2563eb;
+    --primary-light: #dbeafe;
+    --success: #059669;
+    --success-light: #d1fae5;
+    --warning: #d97706;
+    --warning-light: #fef3c7;
+    --danger: #dc2626;
+    --danger-light: #fee2e2;
+    --cyan: #0891b2;
+    --cyan-light: #cffafe;
+    --purple: #7c3aed;
+    --purple-light: #ede9fe;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 6px rgba(0,0,0,.05), 0 2px 4px rgba(0,0,0,.04);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .hero {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #0891b2 100%);
+    color: white;
+    padding: 60px 24px 48px;
+    text-align: center;
+  }
+  .hero h1 { font-size: 2.4rem; font-weight: 700; letter-spacing: -.02em; }
+  .hero .tagline { font-size: 1.1rem; opacity: .85; margin-top: 12px; max-width: 700px; margin-inline: auto; }
+  .hero .badge-row { margin-top: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .badge {
+    background: rgba(255,255,255,.15);
+    backdrop-filter: blur(8px);
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: .82rem;
+  }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 32px 20px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 28px; overflow-x: auto; }
+  .tab {
+    padding: 12px 22px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-size: .92rem;
+    font-weight: 500;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+  .card h2 { font-size: 1.25rem; margin-bottom: 12px; }
+  .card h3 { font-size: 1.05rem; margin-bottom: 10px; color: #334155; }
+
+  /* Architecture Flow */
+  .flow-horizontal {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 10px 0;
+  }
+  .flow-node {
+    padding: 14px 20px;
+    border-radius: var(--radius);
+    font-weight: 600;
+    font-size: .88rem;
+    text-align: center;
+    min-width: 110px;
+  }
+  .flow-arrow { font-size: 1.4rem; color: var(--muted); }
+
+  /* Tool call chain visualization */
+  .tool-chain {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 16px 0;
+    overflow-x: auto;
+  }
+  .tool-step {
+    flex-shrink: 0;
+    padding: 12px 18px;
+    border-radius: var(--radius);
+    background: var(--card);
+    border: 1px solid var(--border);
+    font-size: .8rem;
+    text-align: center;
+    min-width: 120px;
+    position: relative;
+  }
+  .tool-step .step-num {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    width: 24px;
+    height: 24px;
+    background: var(--primary);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .72rem;
+    font-weight: 700;
+  }
+  .tool-step .tool-name { font-weight: 600; font-size: .84rem; color: var(--primary); }
+  .tool-step .tool-ret { font-size: .74rem; color: var(--muted); margin-top: 4px; }
+  .chain-arrow {
+    flex-shrink: 0;
+    font-size: 1.3rem;
+    color: var(--muted);
+    margin: 0 4px;
+  }
+
+  /* Table styles */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .88rem;
+    margin: 12px 0;
+  }
+  th {
+    text-align: left;
+    padding: 10px 14px;
+    background: #f1f5f9;
+    font-weight: 600;
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: var(--muted);
+    border-bottom: 2px solid var(--border);
+  }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+
+  /* Eval layers */
+  .eval-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .eval-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    border-top: 4px solid var(--border);
+  }
+  .eval-card.l1 { border-top-color: var(--primary); }
+  .eval-card.l2 { border-top-color: var(--cyan); }
+  .eval-card.l3 { border-top-color: var(--purple); }
+  .eval-card.l4 { border-top-color: var(--danger); }
+  .eval-card.l5 { border-top-color: var(--warning); }
+  .eval-card h4 { font-size: .95rem; margin-bottom: 8px; }
+  .eval-card .metric-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-size: .82rem;
+    border-bottom: 1px dotted var(--border);
+  }
+  .eval-card .metric-item:last-child { border-bottom: none; }
+  .metric-val { font-weight: 600; }
+
+  /* Comparison bar */
+  .compare-bar {
+    display: flex;
+    border-radius: 6px;
+    overflow: hidden;
+    height: 32px;
+    margin: 8px 0;
+  }
+  .compare-bar .bar-seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .72rem;
+    font-weight: 600;
+    color: white;
+  }
+
+  /* Gradient bars for metrics */
+  .score-bar {
+    height: 8px;
+    border-radius: 4px;
+    background: #e2e8f0;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+  .score-bar .fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
+
+  /* Tool comparison table highlight */
+  .highlight { background: #f0f9ff; }
+
+  /* Response JSON */
+  pre {
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 16px;
+    border-radius: 8px;
+    font-size: .8rem;
+    overflow-x: auto;
+    line-height: 1.5;
+  }
+  pre .key { color: #93c5fd; }
+  pre .str { color: #86efac; }
+  pre .num { color: #fde68a; }
+
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 28px 0;
+  }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin: 18px 0;
+  }
+  .stat-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    text-align: center;
+    box-shadow: var(--shadow);
+  }
+  .stat-box .num { font-size: 2rem; font-weight: 700; color: var(--primary); }
+  .stat-box .label { font-size: .78rem; color: var(--muted); margin-top: 4px; }
+
+  footer {
+    text-align: center;
+    padding: 32px 20px;
+    font-size: .82rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+  }
+  footer a { color: var(--primary); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<!-- ===== Hero ===== -->
+<div class="hero">
+  <h1>SurgAgent-Bench</h1>
+  <p class="tagline">
+    面向手术场景的多模态工具调用与任务决策 Agent Benchmark<br>
+    不只问"这张图里有什么"，而是让 Agent 调用工具、测量距离、评估风险、完成任务
+  </p>
+  <div class="badge-row">
+    <span class="badge">14 Tools</span>
+    <span class="badge">5 Task Families</span>
+    <span class="badge">5-Layer Evaluation</span>
+    <span class="badge">Ophthalmic Microsurgery</span>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ===== Tabs ===== -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('overview')">Overall Design</button>
+  <button class="tab" onclick="switchTab('tasks')">Task Families</button>
+  <button class="tab" onclick="switchTab('tools')">Tool Environment</button>
+  <button class="tab" onclick="switchTab('eval')">Evaluation System</button>
+  <button class="tab" onclick="switchTab('flow')">Agent Workflow</button>
+  <button class="tab" onclick="switchTab('compare')">vs Existing Benchmarks</button>
+</div>
+
+<!-- ===== Tab 1: Overview ===== -->
+<div id="tab-overview" class="tab-content active">
+
+<div class="stats-row">
+  <div class="stat-box"><div class="num">5</div><div class="label">Task Families</div></div>
+  <div class="stat-box"><div class="num">14</div><div class="label">Available Tools</div></div>
+  <div class="stat-box"><div class="num">5</div><div class="label">Evaluation Layers</div></div>
+  <div class="stat-box"><div class="num">30+</div><div class="label">Metrics</div></div>
+  <div class="stat-box"><div class="num">3</div><div class="label">Implementation Phases</div></div>
+</div>
+
+<div class="card">
+  <h2>Core Innovation</h2>
+  <p style="margin-bottom:16px;">
+    Existing surgical benchmarks evaluate <strong>models</strong> — "what's in this image?", "what's the next action?".
+    SurgAgent-Bench evaluates <strong>agents</strong> — "can you use tools, measure distances, assess risks, and produce verifiable surgical decisions?"
+  </p>
+  <div class="flow-horizontal">
+    <div class="flow-node" style="background:var(--primary-light);color:var(--primary);">Video / Image Input</div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-node" style="background:var(--cyan-light);color:var(--cyan);">Agent Reasoning</div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-node" style="background:var(--warning-light);color:var(--warning);">Tool Calls<br><small>(perception / depth / NDI)</small></div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-node" style="background:var(--danger-light);color:var(--danger);">Risk Assessment</div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-node" style="background:var(--success-light);color:var(--success);">Verifiable Output</div>
+  </div>
+  <p style="margin-top: 16px; color: var(--muted); font-size: .88rem;">
+    The agent cannot "guess" from the image alone — it must call perception tools, read depth measurements, query NDI data, and consult safety rules before making a decision.
+  </p>
+</div>
+
+<div class="card">
+  <h2>Architecture</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:16px;">
+    <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px;border-top:4px solid var(--primary);">
+      <h3 style="color:var(--primary);">5 Task Families</h3>
+      <ul style="font-size:.84rem;list-style:none;padding:0;">
+        <li style="padding:4px 0;">&#x1F3AF; Tool-use & Measurement</li>
+        <li style="padding:4px 0;">&#x1F50D; Scene Understanding</li>
+        <li style="padding:4px 0;">&#x1F504; Workflow Reasoning</li>
+        <li style="padding:4px 0;">&#x1F6E1;&#xFE0F; Safety Detection</li>
+        <li style="padding:4px 0;">&#x1F4DD; Teaching Feedback</li>
+      </ul>
+    </div>
+    <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px;border-top:4px solid var(--cyan);">
+      <h3 style="color:var(--cyan);">14 Tools</h3>
+      <ul style="font-size:.84rem;list-style:none;padding:0;">
+        <li style="padding:4px 0;">&#x1F4F7; Visual Perception (4)</li>
+        <li style="padding:4px 0;">&#x1F4CF; Depth & Spatial (4)</li>
+        <li style="padding:4px 0;">&#x23F1;&#xFE0F; Temporal (2)</li>
+        <li style="padding:4px 0;">&#x1F4DA; Knowledge Retrieval (2)</li>
+        <li style="padding:4px 0;">&#x2705; Verification (2)</li>
+      </ul>
+    </div>
+    <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px;border-top:4px solid var(--purple);">
+      <h3 style="color:var(--purple);">5-Layer Eval</h3>
+      <ul style="font-size:.84rem;list-style:none;padding:0;">
+        <li style="padding:4px 0;">L1: Task Completion</li>
+        <li style="padding:4px 0;">L2: Tool Usage (AST)</li>
+        <li style="padding:4px 0;">L3: Spatial Grounding</li>
+        <li style="padding:4px 0;">L4: Safety &#x1F6E1;&#xFE0F;</li>
+        <li style="padding:4px 0;">L5: Efficiency & Stability</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Oph-SurgAgent-Bench: Ophthalmic Subset</h2>
+  <p>Focused on <strong>needle-to-tissue distance assessment</strong> under stereo microscope using real-scale NDI ground truth:</p>
+  <table>
+    <tr><th>Distance</th><th>Risk Level</th><th>Visual</th></tr>
+    <tr>
+      <td>&gt; 1.0 mm</td>
+      <td><span style="color:var(--success);font-weight:600;">Safe</span></td>
+      <td>
+        <div class="score-bar"><div class="fill" style="width:100%;background:var(--success);"></div></div>
+      </td>
+    </tr>
+    <tr>
+      <td>0.5 &ndash; 1.0 mm</td>
+      <td><span style="color:var(--warning);font-weight:600;">Medium Risk</span></td>
+      <td>
+        <div class="score-bar"><div class="fill" style="width:60%;background:var(--warning);"></div></div>
+      </td>
+    </tr>
+    <tr>
+      <td>&lt; 0.5 mm</td>
+      <td><span style="color:var(--danger);font-weight:600;">High Risk</span></td>
+      <td>
+        <div class="score-bar"><div class="fill" style="width:30%;background:var(--danger);"></div></div>
+      </td>
+    </tr>
+  </table>
+  <p style="font-size:.78rem;color:var(--muted);margin-top:8px;">&#x26A0;&#xFE0F; Thresholds are benchmark-defined, not clinical standards.</p>
+</div>
+
+</div>
+
+<!-- ===== Tab 2: Task Families ===== -->
+<div id="tab-tasks" class="tab-content">
+
+<div class="card">
+  <h2>5 Task Families</h2>
+  <p style="margin-bottom:16px;">Each task requires the agent to call specific tools rather than directly answering from visual input.</p>
+
+  <div style="margin-top:20px;">
+    <h3 style="color:var(--primary);">&#x1F3AF; Task 1: Tool-use & Measurement</h3>
+    <p style="font-size:.88rem;color:var(--muted);margin:4px 0 12px;">Core task — agent calls perception + measurement tools to assess spatial relationships.</p>
+    <p><strong>Example:</strong> &ldquo;Determine if the needle tip-to-eye-surface distance is in a risk range. Provide evidence frames, tip coordinates, tissue region, distance, and risk level.&rdquo;</p>
+    <table style="margin-top:8px;">
+      <tr><th>Required Tools</th><td>get_frame &rarr; localize_needle_tip &rarr; segment_tissue &rarr; estimate_depth &rarr; measure_distance &rarr; retrieve_safety_rule</td></tr>
+      <tr><th>Key Metrics</th><td>Tool Call Accuracy, Distance MAE, Risk Accuracy, Evidence Grounding</td></tr>
+      <tr><th>Difficulty</th><td>Easy ~ Hard (scales with #tools and scene complexity)</td></tr>
+    </table>
+  </div>
+
+  <hr class="section-divider">
+
+  <div>
+    <h3 style="color:var(--cyan);">&#x1F50D; Task 2: Scene Understanding</h3>
+    <p style="font-size:.88rem;color:var(--muted);margin:4px 0 12px;">Agent uses perception tools for structured scene analysis.</p>
+    <table>
+      <tr><th>Sub-task</th><th>Output</th></tr>
+      <tr><td>Instrument Recognition</td><td>needle / forceps / cystotome / hook</td></tr>
+      <tr><td>Tissue Recognition</td><td>cornea / lens / iris / sclera</td></tr>
+      <tr><td>Contact Relation</td><td>contact / near-contact / separated</td></tr>
+      <tr><td>Image Quality</td><td>specular highlight / blur / occlusion</td></tr>
+    </table>
+  </div>
+
+  <hr class="section-divider">
+
+  <div>
+    <h3 style="color:var(--purple);">&#x1F504; Task 3: Workflow / Phase Reasoning</h3>
+    <p style="font-size:.88rem;color:var(--muted);margin:4px 0 12px;">Understand surgical phases and predict transitions.</p>
+    <div class="flow-horizontal" style="justify-content:flex-start;flex-wrap:wrap;">
+      <span class="flow-node" style="font-size:.76rem;min-width:80px;padding:8px 10px;background:var(--primary-light);">Prep</span>
+      <span class="flow-arrow">&rarr;</span>
+      <span class="flow-node" style="font-size:.76rem;min-width:80px;padding:8px 10px;background:var(--cyan-light);">Insert</span>
+      <span class="flow-arrow">&rarr;</span>
+      <span class="flow-node" style="font-size:.76rem;min-width:80px;padding:8px 10px;background:var(--warning-light);">Approach</span>
+      <span class="flow-arrow">&rarr;</span>
+      <span class="flow-node" style="font-size:.76rem;min-width:80px;padding:8px 10px;background:var(--danger-light);">Contact</span>
+      <span class="flow-arrow">&rarr;</span>
+      <span class="flow-node" style="font-size:.76rem;min-width:80px;padding:8px 10px;background:var(--purple-light);">Manipulate</span>
+      <span class="flow-arrow">&rarr;</span>
+      <span class="flow-node" style="font-size:.76rem;min-width:80px;padding:8px 10px;background:var(--success-light);">Withdraw</span>
+    </div>
+  </div>
+
+  <hr class="section-divider">
+
+  <div>
+    <h3 style="color:var(--danger);">&#x1F6E1;&#xFE0F; Task 4: Safety / Risk Detection</h3>
+    <p style="font-size:.88rem;color:var(--muted);margin:4px 0 12px;">Identify risks: distance, occlusion, reflection, tracking loss. Uncertainty awareness required.</p>
+    <table>
+      <tr><th>Risk Type</th><th>Example</th><th>Severity</th></tr>
+      <tr><td>distance risk</td><td>Needle-surface distance too small</td><td style="color:var(--danger);">&#x25CF; Critical</td></tr>
+      <tr><td>occlusion risk</td><td>Tip occluded, localization unreliable</td><td style="color:var(--warning);">&#x25CF; High</td></tr>
+      <tr><td>reflection risk</td><td>Specular highlight affecting depth</td><td style="color:var(--warning);">&#x25CF; High</td></tr>
+      <tr><td>out-of-view risk</td><td>Needle tip not in field of view</td><td style="color:var(--danger);">&#x25CF; Critical</td></tr>
+      <tr><td>unstable estimation</td><td>High depth uncertainty</td><td style="color:var(--warning);">&#x25CF; Medium</td></tr>
+    </table>
+  </div>
+
+  <hr class="section-divider">
+
+  <div>
+    <h3 style="color:var(--success);">&#x1F4DD; Task 5: Teaching Feedback</h3>
+    <p style="font-size:.88rem;color:var(--muted);margin:4px 0 12px;">Observe training video, generate structured feedback on instrument stability, efficiency, and skill.</p>
+    <p>Inspired by <strong>JIGSAWS</strong> skill assessment dimensions: economy of motion, bimanual dexterity, tissue handling, suture quality.</p>
+  </div>
+</div>
+
+</div>
+
+<!-- ===== Tab 3: Tools ===== -->
+<div id="tab-tools" class="tab-content">
+
+<div class="card">
+  <h2>14 Tools in 5 Categories</h2>
+  <p style="margin-bottom:16px;">The agent does not operate a real robot — it calls these <strong>functions/APIs</strong> to gather evidence and make informed decisions.</p>
+
+  <h3 style="margin-top:20px;">&#x1F4F7; Visual Perception (4 tools)</h3>
+  <table>
+    <tr><th style="width:200px;">Tool</th><th>Returns</th></tr>
+    <tr>
+      <td><code>get_frame(video_id, timestamp)</code></td>
+      <td>Frame image(s) at the specified timestamp</td>
+    </tr>
+    <tr>
+      <td><code>segment_instrument(frame_id)</code></td>
+      <td>Instrument mask, type (needle/forceps/...), confidence, bbox</td>
+    </tr>
+    <tr>
+      <td><code>localize_needle_tip(frame_id)</code></td>
+      <td>Tip 2D coordinates [x, y], confidence, visibility status</td>
+    </tr>
+    <tr>
+      <td><code>segment_tissue(frame_id, target)</code></td>
+      <td>Tissue mask (cornea/lens/iris/sclera/eye_surface), confidence</td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top:24px;">&#x1F4CF; Depth &amp; Spatial (4 tools)</h3>
+  <table>
+    <tr><th style="width:200px;">Tool</th><th>Returns</th></tr>
+    <tr>
+      <td><code>estimate_depth(left, right, params)</code></td>
+      <td>Dense depth map, confidence map, valid region mask</td>
+    </tr>
+    <tr>
+      <td><code>query_ndi_tip_position(ts, coord)</code></td>
+      <td>NDI 3D coordinates (camera or world frame)</td>
+    </tr>
+    <tr>
+      <td><code>project_3d_to_2d(point, intrinsics)</code></td>
+      <td>Projected 2D pixel + reprojection error</td>
+    </tr>
+    <tr class="highlight">
+      <td><code>measure_tip_to_surface_distance(...)</code></td>
+      <td>&#x2B50; Core tool: distance_mm, nearest surface point, risk level</td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top:24px;">&#x23F1;&#xFE0F; Temporal (2 tools)</h3>
+  <table>
+    <tr><th style="width:200px;">Tool</th><th>Returns</th></tr>
+    <tr><td><code>find_relevant_frames(video_id, query)</code></td><td>Key event timestamps by natural language query</td></tr>
+    <tr><td><code>recognize_surgical_action(clip)</code></td><td>Action label (approach/contact/withdraw/idle)</td></tr>
+  </table>
+
+  <h3 style="margin-top:24px;">&#x1F4DA; Knowledge Retrieval (2 tools)</h3>
+  <table>
+    <tr><th style="width:200px;">Tool</th><th>Returns</th></tr>
+    <tr><td><code>retrieve_safety_rule(task)</code></td><td>Thresholds for safe/medium/high risk ranges</td></tr>
+    <tr><td><code>retrieve_case_info(case_id)</code></td><td>Case metadata (camera type, NDI availability, etc.)</td></tr>
+  </table>
+
+  <h3 style="margin-top:24px;">&#x2705; Verification (2 tools)</h3>
+  <table>
+    <tr><th style="width:200px;">Tool</th><th>Returns</th></tr>
+    <tr><td><code>generate_structured_report(...)</code></td><td>Structured surgical assessment report</td></tr>
+    <tr><td><code>check_measurement_reliability(...)</code></td><td>Reliability assessment + main issue identification</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Recommended Starting Point: Core 8</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+    <div style="padding:10px;border:1px solid var(--border);border-radius:6px;"><code>get_frame</code></div>
+    <div style="padding:10px;border:1px solid var(--border);border-radius:6px;"><code>localize_needle_tip</code></div>
+    <div style="padding:10px;border:1px solid var(--border);border-radius:6px;"><code>segment_instrument</code></div>
+    <div style="padding:10px;border:1px solid var(--border);border-radius:6px;"><code>segment_eye_surface</code></div>
+    <div style="padding:10px;border:1px solid var(--border);border-radius:6px;"><code>estimate_depth</code></div>
+    <div style="padding:10px;border:1px solid var(--border);border-radius:6px;"><code>query_ndi_tip_position</code></div>
+    <div style="padding:10px;border:1px solid var(--border);border-radius:6px;"><code>measure_tip_to_surface_distance</code></div>
+    <div style="padding:10px;border:1px solid var(--border);border-radius:6px;"><code>retrieve_safety_rule</code></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>3-Phase Implementation Strategy</h2>
+  <table>
+    <tr><th>Phase</th><th>Approach</th><th>Use Case</th></tr>
+    <tr>
+      <td><strong>Phase 1: Oracle</strong></td>
+      <td>Tools return human-annotated GT results</td>
+      <td>Validate agent task design; eliminate tool noise</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 2: Model</strong></td>
+      <td>Real models: needle detector, stereo depth, SAM/MedSAM</td>
+      <td>Evaluate agent with model-induced errors</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 3: Hybrid</strong></td>
+      <td>Models + real sensor data (NDI)</td>
+      <td>Closest to the final surgical assistance system</td>
+    </tr>
+  </table>
+</div>
+
+</div>
+
+<!-- ===== Tab 4: Evaluation ===== -->
+<div id="tab-eval" class="tab-content">
+
+<div class="card">
+  <h2>5-Layer Evaluation System</h2>
+  <p style="margin-bottom:20px;">Unlike VQA benchmarks that only check the final answer, SurgAgent-Bench evaluates the entire agent pipeline.</p>
+
+  <div class="eval-grid">
+    <div class="eval-card l1">
+      <h4>&#x1F4CA; L1: Task Completion</h4>
+      <div class="metric-item"><span>Task Success Rate</span><span class="metric-val">—</span></div>
+      <div class="metric-item"><span>Risk Accuracy / F1</span><span class="metric-val">—</span></div>
+      <div class="metric-item"><span>Distance MAE / RMSE</span><span class="metric-val">mm</span></div>
+      <div class="metric-item"><span>Phase Accuracy</span><span class="metric-val">—</span></div>
+      <div class="metric-item"><span>Report Score</span><span class="metric-val">1-5</span></div>
+    </div>
+    <div class="eval-card l2">
+      <h4>&#x1F527; L2: Tool Usage</h4>
+      <div class="metric-item"><span>Tool Selection Accuracy</span><span class="metric-val">—</span></div>
+      <div class="metric-item"><span>Tool Call AST Match</span><span class="metric-val">—</span></div>
+      <div class="metric-item"><span>Tool Chain Completion</span><span class="metric-val">—</span></div>
+      <div class="metric-item"><span>Invalid Tool Call Rate</span><span class="metric-val">%</span></div>
+      <div class="metric-item"><span>Tool Efficiency</span><span class="metric-val">ratio</span></div>
+    </div>
+    <div class="eval-card l3">
+      <h4>&#x1F3AF; L3: Spatial Grounding</h4>
+      <div class="metric-item"><span>Tip Localization Error</span><span class="metric-val">pixels</span></div>
+      <div class="metric-item"><span>Mask IoU / Dice</span><span class="metric-val">—</span></div>
+      <div class="metric-item"><span>Temporal Grounding Error</span><span class="metric-val">sec</span></div>
+      <div class="metric-item"><span>Spatial Relation Acc.</span><span class="metric-val">—</span></div>
+      <div class="metric-item"><span>Depth Error</span><span class="metric-val">mm</span></div>
+    </div>
+    <div class="eval-card l4">
+      <h4>&#x1F6E1;&#xFE0F; L4: Safety (Key)</h4>
+      <div class="metric-item"><span>Critical Risk Recall</span><span class="metric-val" style="color:var(--danger);">&#x2191;1.0</span></div>
+      <div class="metric-item"><span>False Safe Rate</span><span class="metric-val" style="color:var(--danger);">&#x2193;0.0</span></div>
+      <div class="metric-item"><span>Uncertainty Calibration</span><span class="metric-val">ECE</span></div>
+      <div class="metric-item"><span>Escalation Accuracy</span><span class="metric-val">—</span></div>
+      <div class="metric-item"><span>Hallucinated Evidence</span><span class="metric-val">%</span></div>
+    </div>
+    <div class="eval-card l5">
+      <h4>&#x26A1; L5: Efficiency</h4>
+      <div class="metric-item"><span>Token Cost</span><span class="metric-val">tokens</span></div>
+      <div class="metric-item"><span>Latency</span><span class="metric-val">ms</span></div>
+      <div class="metric-item"><span>Run Stability</span><span class="metric-val">consistency</span></div>
+      <div class="metric-item"><span>Robustness</span><span class="metric-val">&#x394;score</span></div>
+      <div class="metric-item"><span>Tool Cost</span><span class="metric-val">compute</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Recommended Weights (Oph-SurgAgent-Bench v1)</h2>
+  <div class="compare-bar">
+    <div class="bar-seg" style="width:25%;background:var(--primary);">Task 25%</div>
+    <div class="bar-seg" style="width:25%;background:var(--cyan);">Tools 25%</div>
+    <div class="bar-seg" style="width:20%;background:var(--purple);">Spatial 20%</div>
+    <div class="bar-seg" style="width:20%;background:var(--danger);">Safety 20%</div>
+    <div class="bar-seg" style="width:10%;background:var(--warning);">Efficiency 10%</div>
+  </div>
+  <p style="font-size:.8rem;color:var(--muted);margin-top:10px;">Safety evaluation at 20% weight is a key differentiator from traditional surgical benchmarks.</p>
+</div>
+
+</div>
+
+<!-- ===== Tab 5: Workflow ===== -->
+<div id="tab-flow" class="tab-content">
+
+<div class="card">
+  <h2>Complete Agent Call Flow</h2>
+  <p style="margin-bottom:16px;">Example: &ldquo;Determine if the needle tip distance is dangerous at 00:07.2&rdquo;</p>
+
+  <div class="tool-chain">
+    <div class="tool-step">
+      <span class="step-num">1</span>
+      <div class="tool-name">get_frame</div>
+      <div class="tool-ret">frame @ 00:07.2</div>
+    </div>
+    <span class="chain-arrow">&rarr;</span>
+    <div class="tool-step">
+      <span class="step-num">2</span>
+      <div class="tool-name">localize_needle_tip</div>
+      <div class="tool-ret">tip [612, 384]</div>
+    </div>
+    <span class="chain-arrow">&rarr;</span>
+    <div class="tool-step">
+      <span class="step-num">3</span>
+      <div class="tool-name">segment_tissue</div>
+      <div class="tool-ret">eye surface mask</div>
+    </div>
+    <span class="chain-arrow">&rarr;</span>
+    <div class="tool-step">
+      <span class="step-num">4</span>
+      <div class="tool-name">estimate_depth</div>
+      <div class="tool-ret">dense depth map</div>
+    </div>
+    <span class="chain-arrow">&rarr;</span>
+    <div class="tool-step">
+      <span class="step-num">5</span>
+      <div class="tool-name">query_ndi</div>
+      <div class="tool-ret">3D: [3.2,1.5,42.8]</div>
+    </div>
+    <span class="chain-arrow">&rarr;</span>
+    <div class="tool-step">
+      <span class="step-num">6</span>
+      <div class="tool-name">measure_distance</div>
+      <div class="tool-ret">0.83mm, medium</div>
+    </div>
+    <span class="chain-arrow">&rarr;</span>
+    <div class="tool-step">
+      <span class="step-num">7</span>
+      <div class="tool-name">retrieve_rule</div>
+      <div class="tool-ret">threshold: 1.0mm</div>
+    </div>
+    <span class="chain-arrow">&rarr;</span>
+    <div class="tool-step" style="background:var(--success-light);">
+      <span class="step-num" style="background:var(--success);">8</span>
+      <div class="tool-name">Output</div>
+      <div class="tool-ret">risk: medium, 0.83mm</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Bad Agent vs Good Agent</h2>
+  <table>
+    <tr>
+      <th style="width:120px;"></th>
+      <th style="color:var(--danger);">&#x274C; Bad Agent</th>
+      <th style="color:var(--success);">&#x2705; Good Agent</th>
+    </tr>
+    <tr>
+      <td><strong>Approach</strong></td>
+      <td>Looks at image, guesses: &ldquo;seems a bit close&rdquo;</td>
+      <td>Frames &rarr; localize &rarr; segment &rarr; depth &rarr; NDI &rarr; measure &rarr; threshold</td>
+    </tr>
+    <tr>
+      <td><strong>Verifiability</strong></td>
+      <td>Cannot verify</td>
+      <td>Every step is verifiable</td>
+    </tr>
+    <tr>
+      <td><strong>Uncertainty</strong></td>
+      <td>Not stated</td>
+      <td>Explicit: &ldquo;moderate, local specular reflection&rdquo;</td>
+    </tr>
+    <tr>
+      <td><strong>Tool Evidence</strong></td>
+      <td>None</td>
+      <td>Complete tool call chain logged</td>
+    </tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Example Agent Output</h2>
+<pre>{
+  <span class="key">"answer"</span>:      <span class="str">"当前针尖距离眼表较近，属于中风险。"</span>,
+  <span class="key">"risk_level"</span>:   <span class="str">"medium"</span>,
+  <span class="key">"evidence_timestamp"</span>: <span class="str">"00:07.2"</span>,
+  <span class="key">"needle_tip_xy"</span>:   [<span class="num">612</span>, <span class="num">384</span>],
+  <span class="key">"target_region"</span>:  <span class="str">"corneal_surface"</span>,
+  <span class="key">"distance_mm"</span>:    <span class="num">0.83</span>,
+  <span class="key">"tool_calls"</span>:    [<span class="str">"get_frame"</span>, <span class="str">"localize_needle_tip"</span>,
+                     <span class="str">"depth_estimator"</span>, <span class="str">"distance_calculator"</span>],
+  <span class="key">"uncertainty"</span>:   <span class="str">"moderate"</span>,
+  <span class="key">"reason"</span>:       <span class="str">"针尖位于眼表上方，深度差较小，但局部存在反光，
+                    测量置信度中等。"</span>
+}</pre>
+</div>
+
+</div>
+
+<!-- ===== Tab 6: Compare ===== -->
+<div id="tab-compare" class="tab-content">
+
+<div class="card">
+  <h2>Existing Benchmarks Landscape</h2>
+
+  <h3>Category 1: General LLM Agent Benchmarks</h3>
+  <table>
+    <tr><th>Benchmark</th><th>Focus</th><th>Inspiration for Us</th></tr>
+    <tr><td>BFCL</td><td>Function call AST matching</td><td>Evaluate tool call correctness</td></tr>
+    <tr><td>ToolBench / ToolLLM</td><td>16,464 real APIs</td><td>Multi-tool chain design</td></tr>
+    <tr><td>GAIA</td><td>466 real-world problems</td><td>&ldquo;Simple answer, complex process&rdquo; design</td></tr>
+    <tr><td>AgentBench</td><td>8 interaction environments</td><td>Evaluate the process, not just the answer</td></tr>
+    <tr><td>WebArena / OSWorld</td><td>812 / 369 web/OS tasks</td><td>&ldquo;Simulated environment + tool API&rdquo; pattern</td></tr>
+    <tr><td><strong>SWE-bench</strong></td><td>Real GitHub issues, test-driven</td><td><strong>Auto-verifiable results</strong> — core constraint</td></tr>
+  </table>
+
+  <h3 style="margin-top:28px;">Category 2: Medical LLM / Agent Benchmarks</h3>
+  <table>
+    <tr><th>Benchmark</th><th>Content</th><th>Limitation</th></tr>
+    <tr><td>MedHELM</td><td>Clinical decisions, records, communication</td><td>Text-based, not surgical</td></tr>
+    <tr><td>MedAgentBench</td><td>300 clinical tasks in FHIR EHR</td><td>EHR-focused, not surgical video</td></tr>
+    <tr><td>AgentClinic</td><td>Simulated clinic + patient interaction</td><td>Consultation, not operation</td></tr>
+  </table>
+
+  <h3 style="margin-top:28px;">Category 3: Surgical AI Benchmarks</h3>
+  <table>
+    <tr><th>Benchmark</th><th>Task</th><th>Limitation</th></tr>
+    <tr><td>Cholec80</td><td>Phase + tool presence</td><td>Not agent-based</td></tr>
+    <tr><td>EndoVis</td><td>Instrument / scene segmentation</td><td>Perception only</td></tr>
+    <tr><td>JIGSAWS</td><td>Robot surgery skill evaluation</td><td>Not agent-based</td></tr>
+    <tr><td>SurgBench</td><td>72 tasks: phase, tool, action, organ</td><td>Model evaluation, not agent</td></tr>
+    <tr><td>SurgMLLMBench</td><td>Surgical MLLM understanding, VQA</td><td>Approaching MLLM but not agent</td></tr>
+    <tr><td>SAP-Bench</td><td>Action planning from frames</td><td>Closest — but single-step, no tools</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>The Gap &amp; Our Positioning</h2>
+  <p style="margin-bottom:20px;font-size:1.05rem;">
+    <strong>SurgAgent-Bench is the first benchmark to evaluate multimodal agent capability in surgical scenarios — perception, tool calling, spatial reasoning, risk assessment, and verifiable decision-making in a unified framework.</strong>
+  </p>
+  <table>
+    <tr>
+      <th>Dimension</th>
+      <th>Surgical VQA</th>
+      <th>SAP-Bench</th>
+      <th style="background:var(--primary-light);"><strong>SurgAgent-Bench</strong></th>
+    </tr>
+    <tr>
+      <td>Core Question</td>
+      <td>&ldquo;What's in this image?&rdquo;</td>
+      <td>&ldquo;What's the next action?&rdquo;</td>
+      <td style="background:var(--primary-light);"><strong>&ldquo;How does the agent gather evidence and decide?&rdquo;</strong></td>
+    </tr>
+    <tr>
+      <td>Interaction</td>
+      <td>Single-turn QA</td>
+      <td>Single-step prediction</td>
+      <td style="background:var(--primary-light);"><strong>Multi-turn tool calling</strong></td>
+    </tr>
+    <tr>
+      <td>Spatial Info</td>
+      <td>2D visual</td>
+      <td>2D visual</td>
+      <td style="background:var(--primary-light);"><strong>2D + 3D + real-scale (depth/NDI)</strong></td>
+    </tr>
+    <tr>
+      <td>Safety Eval</td>
+      <td>None</td>
+      <td>None</td>
+      <td style="background:var(--primary-light);"><strong>4 safety metrics (L4)</strong></td>
+    </tr>
+    <tr>
+      <td>Auto-verifiable</td>
+      <td>Partial</td>
+      <td>Partial</td>
+      <td style="background:var(--primary-light);"><strong>Full pipeline verifiable</strong></td>
+    </tr>
+  </table>
+</div>
+
+</div>
+
+</div><!-- .container -->
+
+<footer>
+  <p><strong>SurgAgent-Bench</strong> &mdash; From &ldquo;what's in this image&rdquo; to &ldquo;can the agent make verifiable surgical decisions?&rdquo;</p>
+  <p style="margin-top:4px;"><a href="https://github.com/EthanCherry/surgagent-bench" target="_blank">github.com/EthanCherry/surgagent-bench</a></p>
+</footer>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.tab[onclick="switchTab('${name}')"]`).classList.add('active');
+  document.getElementById(`tab-${name}`).classList.add('active');
+}
+</script>
+
+</body>
+</html>
