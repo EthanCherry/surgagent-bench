@@ -1,0 +1,22 @@
+# Dependencies
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data (large files)
+*.mp4
+*.avi
+*.npy
+data/
