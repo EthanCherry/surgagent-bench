@@ -4,6 +4,8 @@
 >
 > 不只问模型"这张图里有什么"，而是让 Agent 像一个手术辅助系统一样，观察视频/图像，调用工具，读取测量结果，结合手术知识，最后完成一个可验证的手术任务。
 
+🔗 **Live Demo**: [ethancherry.github.io/surgagent-bench](https://ethancherry.github.io/surgagent-bench/)
+
 ---
 
 ## 目录
